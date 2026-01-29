@@ -2,7 +2,7 @@
 
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { FlutterWidget, EdgeInsets, MainAxisAlignment, CrossAxisAlignment } from '@/types';
+import { FlutterWidget, EdgeInsets, MainAxisAlignment, CrossAxisAlignment } from './types';
 
 // --- UTILS ---
 const resolveEdgeInsets = (p?: EdgeInsets): string => {
@@ -13,6 +13,20 @@ const resolveEdgeInsets = (p?: EdgeInsets): string => {
       return parts.join(' ');
   }
   return `${p}px`;
+};
+
+const resolveBoxFit = (fit?: string): React.CSSProperties['objectFit'] => {
+  switch (fit) {
+    case 'cover': return 'cover';
+    case 'contain': return 'contain';
+    case 'fill': return 'fill';
+    case 'none': return 'none';
+    case 'scaleDown': return 'scale-down';
+    // Map Flutter-specific logic to the closest CSS equivalent
+    case 'fitWidth': return 'contain'; 
+    case 'fitHeight': return 'contain';
+    default: return 'cover';
+  }
 };
 
 const resolveDimension = (val?: number | string): string => {
@@ -301,23 +315,23 @@ export function FlutterRenderer({ widget, selectedId, onSelect }: RendererProps)
         </div>
       );
 
-    case 'Image':
-      return (
-        <img 
-          id={widget.id}
-          onClick={handleClick}
-          src={widget.params.src || 'https://via.placeholder.com/150'} 
-          alt="asset"
-          style={{
-            ...selectionStyle,
-            width: resolveDimension(widget.params.width),
-            height: resolveDimension(widget.params.height),
-            objectFit: widget.params.fit || 'cover',
-            borderRadius: widget.params.borderRadius,
-            display: 'block'
-          }}
-        />
-      );
+      case 'Image':
+        return (
+          <img 
+            id={widget.id}
+            onClick={handleClick}
+            src={widget.params.src || 'https://via.placeholder.com/150'} 
+            alt="asset"
+            style={{
+              ...selectionStyle,
+              width: resolveDimension(widget.params.width),
+              height: resolveDimension(widget.params.height),
+              objectFit: resolveBoxFit(widget.params.fit), 
+              borderRadius: widget.params.borderRadius,
+              display: 'block'
+            }}
+          />
+        );
       
     case 'SizedBox':
       return (
