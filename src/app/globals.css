@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* * TAILWIND v4 PLUGINS 
+ */
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * THEME DEFINITIONS
+ */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+
+  /* Custom Color Mapping */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+
+  /* Radius Scale */
+  --radius-xl: 1rem;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
+
+  /* Elevation & Glow */
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 2px 10px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px -3px var(--primary);
+  
+  /* Animate durations */
+  --animate-in: in 0.2s ease-out;
+  --animate-out: out 0.15s ease-in;
+}
+
+/*
+ * VARIABLE SYSTEM
+ */
+:root {
+  /* Core IDE Palette - Light Mode (Default) */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #64748b;
+  --secondary-foreground: #ffffff;
+
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  
+  --radius: 0.625rem;
+
+  /* Shadcn-Compatible Variables */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+}
+
+.dark {
+  /* Pro Dark Mode - Deep Slate & Navy */
+  --background: #020617;
+  --foreground: #f8fafc;
+  --surface: #0f172a;
+  --border: rgba(255, 255, 255, 0.08);
+  
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+
+  --card: #020617;
+  --card-foreground: #f8fafc;
+  --popover: #020617;
+  --popover-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #7f1d1d;
+  --input: #1e293b;
+  --ring: #3b82f6;
+}
+
+/*
+ * BASE STYLES
+ */
+@layer base {
+  * {
+    @apply border-border outline-none;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Reset Selection Color for better Code contrast */
+  ::selection {
+    @apply bg-primary/20 text-primary-foreground;
+  }
+}
+
+/*
+ * IDE UTILITIES
+ */
+@layer utilities {
+  /* Thin Professional Scrollbars */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border/40 rounded-full transition-colors;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/50;
+  }
+
+  /* IDE Panels & Containers */
+  .glass-panel {
+    @apply bg-background/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .mirror-grid {
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
