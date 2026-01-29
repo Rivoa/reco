@@ -64,7 +64,7 @@ const navItems = [
     icon: Settings, 
     label: "Settings", 
     href: "/settings", 
-    roles: ["admin"] 
+    roles: ["admin", "developer", "userg"] 
   },
 ];
 
