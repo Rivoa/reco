@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { AppScreen, DEVICES, FlutterWidget } from "./types";
 import { ScreenService } from "@/services/screenService";
+
+// Hooks
+import { useResizableLayout } from "@/components/resize";
 
 // Components
 import { Header } from "./components/Header";
@@ -11,7 +14,7 @@ import { Canvas } from "./components/Canvas";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { ScreenManager } from "./components/ScreenManager";
 import { EditorPanel } from "./components/EditorPanel";
-import { FileJson, Plus, Loader2, X, Code, PanelLeftClose, PanelRightClose, Layers } from "lucide-react";
+import { FileJson, Plus, Loader2, Code, PanelLeftClose, PanelRightClose, Layers } from "lucide-react";
 
 const DEFAULT_LAYOUT: FlutterWidget = {
   id: "root",
@@ -21,13 +24,22 @@ const DEFAULT_LAYOUT: FlutterWidget = {
 };
 
 export default function ArchitectIDE() {
+  // --- RESIZE LOGIC (Extracted) ---
+  const { 
+    leftWidth, 
+    rightWidth, 
+    isResizing, 
+    leftSidebarRef, 
+    rightSidebarRef, 
+    startResize 
+  } = useResizableLayout(280, 400);
+
   // --- STATE ---
   const [screens, setScreens] = useState<AppScreen[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   const activeScreen = screens.find(s => s.id === activeScreenId);
 
   // Editor State
@@ -39,21 +51,13 @@ export default function ArchitectIDE() {
   const [zoom, setZoom] = useState(0.85);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   
-  // Collapse States
+  // Sidebar Visibility
   const [isScreensOpen, setIsScreensOpen] = useState(true);
   const [isLayersOpen, setIsLayersOpen] = useState(true);
-
-  // Sidebar Visibility
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
 
-  // Resize State
-  const [leftWidth, setLeftWidth] = useState(280);
-  const [rightWidth, setRightWidth] = useState(400);
-  const [isResizing, setIsResizing] = useState<"left" | "right" | null>(null);
-  const sidebarRef = useRef<{ startX: number; startWidth: number } | null>(null);
-
-  // --- 1. INITIAL LOAD ---
+  // --- INITIAL LOAD ---
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -71,7 +75,7 @@ export default function ArchitectIDE() {
     loadData();
   }, []);
 
-  // --- 2. SYNC LOGIC ---
+  // --- SYNC LOGIC ---
   useEffect(() => {
     if (!activeScreen) return;
     setLayout(activeScreen.layout);
@@ -100,19 +104,17 @@ export default function ArchitectIDE() {
   };
 
   const handleAddScreen = async () => {
-    /* ... existing ... */
     const name = `Screen ${screens.length + 1}`;
     try {
       const newScreen = await ScreenService.createScreen(name, DEFAULT_LAYOUT);
       setScreens(prev => [...prev, newScreen]);
       setActiveScreenId(newScreen.id);
       setIsScreensOpen(true);
-      setShowLeftSidebar(true); // Ensure sidebar opens when adding
+      setShowLeftSidebar(true);
     } catch {}
   };
 
   const handleDeleteScreen = async (id: string) => {
-    /* ... existing ... */
     if (screens.length <= 1) return;
     try {
       const newScreens = screens.filter(s => s.id !== id);
@@ -122,29 +124,12 @@ export default function ArchitectIDE() {
     } catch {}
   };
 
-  // --- RESIZE LOGIC ---
-  const startResize = (direction: "left" | "right", e: React.MouseEvent) => {
-    e.preventDefault(); setIsResizing(direction);
-    sidebarRef.current = { startX: e.clientX, startWidth: direction === "left" ? leftWidth : rightWidth };
-    document.body.style.cursor = "col-resize"; document.body.style.userSelect = "none";
-  };
-  const stopResize = useCallback(() => { setIsResizing(null); sidebarRef.current = null; document.body.style.cursor = ""; document.body.style.userSelect = ""; }, []);
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing || !sidebarRef.current) return;
-    requestAnimationFrame(() => {
-      const { startX, startWidth } = sidebarRef.current!;
-      const delta = e.clientX - startX;
-      if (isResizing === "left") setLeftWidth(Math.max(200, Math.min(600, startWidth + delta)));
-      else setRightWidth(Math.max(300, Math.min(800, startWidth - delta)));
-    });
-  }, [isResizing]);
-  useEffect(() => { if (isResizing) { window.addEventListener("mousemove", onMouseMove); window.addEventListener("mouseup", stopResize); } return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", stopResize); }; }, [isResizing, onMouseMove, stopResize]);
-
-
   if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-[#0b0d10] text-zinc-500 gap-2"><Loader2 className="animate-spin" /> Loading Architect...</div>;
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0b0d10] text-zinc-300 font-inter overflow-hidden select-none">
+      
+      {/* Overlay for Dragging */}
       {isResizing && <div className="fixed inset-0 z-[9999] cursor-col-resize bg-transparent" />}
 
       <Header 
@@ -158,27 +143,27 @@ export default function ArchitectIDE() {
 
       <div className="flex-1 flex overflow-hidden relative">
         
-        {/* --- LEFT SIDEBAR (Collapsible) --- */}
+        {/* --- LEFT SIDEBAR --- */}
         <div 
-          className="flex shrink-0 transition-all duration-300 ease-in-out overflow-hidden relative border-r border-white/5 bg-[#0f1117]"
-          style={{ width: showLeftSidebar ? leftWidth : 48 /* Collapsed width = activity bar only */ }}
+          ref={leftSidebarRef} 
+          className="flex shrink-0 transition-none ease-linear overflow-hidden relative border-r border-white/5 bg-[#0f1117]"
+          style={{ width: showLeftSidebar ? leftWidth : 48 }}
         >
-          {/* ACTIVITY BAR (Always Visible) */}
+          {/* ACTIVITY BAR */}
           <nav className="w-12 shrink-0 bg-[#0b0d10] border-r border-white/5 flex flex-col items-center py-4 gap-4 z-20 h-full relative">
             <button 
               onClick={() => setShowLeftSidebar(!showLeftSidebar)}
               className={`p-2 rounded-lg transition-colors ${showLeftSidebar ? 'bg-blue-600/10 text-blue-500' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
-              title="Toggle Explorer"
             >
               <Layers size={20} />
             </button>
-            {/* Additional icons can go here */}
+
+            
           </nav>
 
-          {/* SIDEBAR CONTENT (Hidden when width is small) */}
+          {/* SIDEBAR CONTENT */}
           <div className="flex-1 flex flex-col min-w-[200px] relative"> 
             
-            {/* Header with CLOSE Button */}
             <div className="flex items-center justify-between h-9 px-3 bg-[#13151b] border-b border-white/5 shrink-0">
                <span className="text-[10px] font-bold tracking-[0.1em] text-zinc-500">EXPLORER</span>
                <button onClick={() => setShowLeftSidebar(false)} className="text-zinc-600 hover:text-zinc-300 transition-colors">
@@ -186,7 +171,6 @@ export default function ArchitectIDE() {
                </button>
             </div>
 
-            {/* Panels */}
             <div className={`flex flex-col border-b border-white/5 overflow-hidden transition-all duration-300 ${isScreensOpen ? (isLayersOpen ? 'flex-1' : 'flex-[1]') : 'flex-none h-9'}`}>
               <PanelHeader title="SCREENS" isOpen={isScreensOpen} onToggle={() => setIsScreensOpen(!isScreensOpen)} action={<Plus size={14} className="cursor-pointer hover:text-white" onClick={handleAddScreen} />} />
               {isScreensOpen && <ScreenManager screens={screens} activeScreenId={activeScreenId!} onSelect={setActiveScreenId} onAdd={handleAddScreen} onDelete={handleDeleteScreen} />}
@@ -196,6 +180,7 @@ export default function ArchitectIDE() {
                {isLayersOpen && <div className="flex-1 overflow-y-auto custom-scrollbar py-2"><WidgetTree widget={layout} selectedId={selectedWidgetId} onSelect={setSelectedWidgetId} /></div>}
             </div>
             
+            {/* RESIZE HANDLE */}
             <ResizeHandle isResizing={isResizing === 'left'} onMouseDown={(e) => startResize("left", e)} position="left" />
           </div>
         </div>
@@ -207,36 +192,31 @@ export default function ArchitectIDE() {
             device={activeDevice}
             zoom={zoom}
             setZoom={setZoom}
-            isResizing={!!isResizing}
+            isResizing={!!isResizing} 
             selectedId={selectedWidgetId}
             onSelect={setSelectedWidgetId}
           />
           
-          {/* FLOATING TRIGGER: Show Editor (Only when Right Sidebar is Hidden) */}
           {!showRightSidebar && (
             <button 
               onClick={() => setShowRightSidebar(true)}
               className="absolute top-6 right-6 z-40 p-2.5 bg-[#1a1d24] text-zinc-400 hover:text-white border border-white/10 rounded-full shadow-xl hover:scale-110 transition-all group"
-              title="Open Editor"
             >
               <Code size={18} />
-              <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                Open Editor
-              </span>
             </button>
           )}
         </div>
 
-        {/* --- RIGHT SIDEBAR (Collapsible) --- */}
+        {/* --- RIGHT SIDEBAR --- */}
         <aside 
-          className="flex flex-col shrink-0 bg-[#0f1117] border-l border-white/5 relative transition-all duration-300 ease-in-out"
+          ref={rightSidebarRef}
+          className="flex flex-col shrink-0 bg-[#0f1117] border-l border-white/5 relative transition-none ease-linear"
           style={{ width: showRightSidebar ? rightWidth : 0, opacity: showRightSidebar ? 1 : 0 }}
         >
-          {/* Inner wrapper to prevent reflow */}
-          <div className="w-[400px] h-full flex flex-col min-w-full">
+          <div className="w-full h-full flex flex-col min-w-[300px]">
+            {/* RESIZE HANDLE */}
             <ResizeHandle isResizing={isResizing === 'right'} onMouseDown={(e) => startResize("right", e)} position="right" />
             
-            {/* Header with CLOSE Button */}
             <div className="h-9 px-3 flex items-center justify-between bg-[#13151b] border-b border-white/5 shrink-0 select-none">
               <div className="flex items-center gap-2 text-zinc-500">
                 <FileJson size={14} />
@@ -259,7 +239,6 @@ export default function ArchitectIDE() {
       </div>
       
       <style jsx global>{`
-        .bg-dots { background-image: radial-gradient(#27272a 1px, transparent 1px); background-size: 24px 24px; }
         .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 5px; border: 2px solid #0f1117; }
@@ -269,7 +248,7 @@ export default function ArchitectIDE() {
   );
 }
 
-// Sub-components
+// Sub-components kept as is...
 interface PanelHeaderProps { title: string; icon?: React.ReactNode; action?: React.ReactNode; isOpen?: boolean; onToggle?: () => void; }
 function PanelHeader({ title, icon, action, isOpen = true, onToggle }: PanelHeaderProps) {
    return (

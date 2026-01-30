@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Maximize, Minus, Plus, Scan } from "lucide-react";
+import { Minus, Plus, Scan } from "lucide-react";
 import { FlutterRenderer } from "../renderer";
 import { DeviceConfig, FlutterWidget } from "../types";
 
@@ -74,26 +74,13 @@ export function Canvas({ layout, device, zoom, setZoom, isResizing, selectedId, 
     setZoom(0.85);
   };
 
-  // Calculate dynamic background properties for the "Infinite" effect
-  // 1. We start centering the background at 50% 50%
-  // 2. We add the pan offset
-  // 3. We scale the dot size based on zoom
-  const gridSize = 24 * zoom;
-  const bgPositionX = `calc(50% + ${pan.x}px)`;
-  const bgPositionY = `calc(50% + ${pan.y}px)`;
-
   return (
     <main 
       ref={containerRef}
-      className="flex-1 min-w-0 bg-[#0b0d10] relative flex overflow-hidden cursor-grab active:cursor-grabbing select-none bg-dots"
+      className="flex-1 min-w-0 bg-[#0b0d10] relative flex overflow-hidden cursor-grab active:cursor-grabbing select-none"
       onMouseDown={handleMouseDown}
       onWheel={handleWheel}
       data-pan-surface="true"
-      style={{
-        // DYNAMIC BACKGROUND: Moves and Scales with the canvas
-        backgroundPosition: `${bgPositionX} ${bgPositionY}`,
-        backgroundSize: `${gridSize}px ${gridSize}px`,
-      }}
     >
       
       {/* FLOATING CONTROLS */}
@@ -110,7 +97,7 @@ export function Canvas({ layout, device, zoom, setZoom, isResizing, selectedId, 
       <div 
         className="flex-1 w-full h-full flex items-center justify-center"
         style={{
-          // Only transform the CONTENT, not the background container
+          // Only transform the CONTENT
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: "center center",
           transition: isPanning || isResizing ? 'none' : 'transform 0.1s cubic-bezier(0.2,0,0,1)',
