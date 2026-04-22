@@ -129,8 +129,9 @@ export default function NotesUploadPage() {
         copiedPages.forEach((page) => chunkPdf.addPage(page))
 
         const chunkBytes = await chunkPdf.save()
-        const chunkBlob = new Blob([chunkBytes], { type: "application/pdf" })
-
+        const chunkBlob = new Blob([chunkBytes as any], {
+          type: "application/pdf",
+        })
         const bouncerRes = await fetch(BOUNCER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", Origin: ADMIN_ORIGIN },
