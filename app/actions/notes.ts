@@ -9,45 +9,46 @@ const BOUNCER_URL = process.env.R2_BOUNCER_URL?.endsWith("/")
   : `${process.env.R2_BOUNCER_URL}/`
 
 async function getAdminToken() {
-  // 1. Get the string from ENV
   const jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
 
-  if (!jsonString) {
-    // Fallback for local development using a physical file
-    const auth = new GoogleAuth({
-      keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-      scopes: [
-        "https://www.googleapis.com/auth/datastore",
-        "https://www.googleapis.com/auth/cloud-platform",
-      ],
-    })
-    const client = await auth.getClient()
-    const token = await client.getAccessToken()
-    return token.token
+  // Case 1: Vercel / Production (using the JSON string)
+  if (jsonString) {
+    try {
+      // 1. Strip any potential extra quotes or whitespace
+      const cleanedJson = jsonString.trim()
+      const credentials = JSON.parse(cleanedJson)
+
+      const auth = new GoogleAuth({
+        credentials, // Use the parsed object
+        keyFile: undefined, // Explicitly tell it NOT to look for a file
+        scopes: [
+          "https://www.googleapis.com/auth/datastore",
+          "https://www.googleapis.com/auth/cloud-platform",
+        ],
+      })
+
+      const client = await auth.getClient()
+      const token = await client.getAccessToken()
+      return token.token
+    } catch (e) {
+      console.error("❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", e)
+      throw e
+    }
   }
 
-  try {
-    // 2. PARSE it into a Javascript Object
-    const credentials = JSON.parse(jsonString)
+  // Case 2: Local Development (using service.json)
+  const auth = new GoogleAuth({
+    keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS, // Path to file
+    scopes: [
+      "https://www.googleapis.com/auth/datastore",
+      "https://www.googleapis.com/auth/cloud-platform",
+    ],
+  })
 
-    // 3. Use 'credentials' field, NOT 'keyFile'
-    const auth = new GoogleAuth({
-      credentials,
-      scopes: [
-        "https://www.googleapis.com/auth/datastore",
-        "https://www.googleapis.com/auth/cloud-platform",
-      ],
-    })
-
-    const client = await auth.getClient()
-    const token = await client.getAccessToken()
-    return token.token
-  } catch (e) {
-    console.error("❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", e)
-    throw new Error("Invalid Service Account JSON format")
-  }
+  const client = await auth.getClient()
+  const token = await client.getAccessToken()
+  return token.token
 }
-
 /**
  * Retrieves pending notes from Firestore.
  */
