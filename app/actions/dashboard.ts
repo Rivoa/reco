@@ -2,21 +2,47 @@
 
 import { GoogleAuth } from "google-auth-library"
 
-const PROJECT_ID = "klaz-e14eb"
+const PROJECT_ID = process.env.PROJECT_ID
 
 async function getAdminToken() {
-  const auth = new GoogleAuth({
-    scopes: [
-      "https://www.googleapis.com/auth/datastore",
-      "https://www.googleapis.com/auth/cloud-platform",
-      "https://www.googleapis.com/auth/userinfo.email",
-    ],
-  })
-  const client = await auth.getClient()
-  const token = await client.getAccessToken()
-  return token.token
-}
+  // 1. Get the string from ENV
+  const jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
 
+  if (!jsonString) {
+    // Fallback for local development using a physical file
+    const auth = new GoogleAuth({
+      keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      scopes: [
+        "https://www.googleapis.com/auth/datastore",
+        "https://www.googleapis.com/auth/cloud-platform",
+      ],
+    })
+    const client = await auth.getClient()
+    const token = await client.getAccessToken()
+    return token.token
+  }
+
+  try {
+    // 2. PARSE it into a Javascript Object
+    const credentials = JSON.parse(jsonString)
+
+    // 3. Use 'credentials' field, NOT 'keyFile'
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: [
+        "https://www.googleapis.com/auth/datastore",
+        "https://www.googleapis.com/auth/cloud-platform",
+      ],
+    })
+
+    const client = await auth.getClient()
+    const token = await client.getAccessToken()
+    return token.token
+  } catch (e) {
+    console.error("❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", e)
+    throw new Error("Invalid Service Account JSON format")
+  }
+}
 export async function getLiveDashboardStats() {
   try {
     const token = await getAdminToken()

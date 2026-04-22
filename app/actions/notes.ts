@@ -8,31 +8,44 @@ const BOUNCER_URL = process.env.R2_BOUNCER_URL?.endsWith("/")
   ? process.env.R2_BOUNCER_URL
   : `${process.env.R2_BOUNCER_URL}/`
 
-/**
- * Generates an OAuth2 token.
- * Supports both Vercel (JSON string) and Local (keyFile).
- */
 async function getAdminToken() {
-  const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
-    ? JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON)
-    : undefined
+  // 1. Get the string from ENV
+  const jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
 
-  const auth = new GoogleAuth({
-    credentials,
-    // Fallback for local development
-    keyFile: !credentials
-      ? process.env.GOOGLE_APPLICATION_CREDENTIALS
-      : undefined,
-    scopes: [
-      "https://www.googleapis.com/auth/datastore",
-      "https://www.googleapis.com/auth/cloud-platform",
-      "https://www.googleapis.com/auth/userinfo.email",
-    ],
-  })
+  if (!jsonString) {
+    // Fallback for local development using a physical file
+    const auth = new GoogleAuth({
+      keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      scopes: [
+        "https://www.googleapis.com/auth/datastore",
+        "https://www.googleapis.com/auth/cloud-platform",
+      ],
+    })
+    const client = await auth.getClient()
+    const token = await client.getAccessToken()
+    return token.token
+  }
 
-  const client = await auth.getClient()
-  const token = await client.getAccessToken()
-  return token.token
+  try {
+    // 2. PARSE it into a Javascript Object
+    const credentials = JSON.parse(jsonString)
+
+    // 3. Use 'credentials' field, NOT 'keyFile'
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: [
+        "https://www.googleapis.com/auth/datastore",
+        "https://www.googleapis.com/auth/cloud-platform",
+      ],
+    })
+
+    const client = await auth.getClient()
+    const token = await client.getAccessToken()
+    return token.token
+  } catch (e) {
+    console.error("❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", e)
+    throw new Error("Invalid Service Account JSON format")
+  }
 }
 
 /**
