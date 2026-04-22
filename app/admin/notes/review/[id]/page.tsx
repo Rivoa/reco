@@ -43,10 +43,10 @@ export default function DetailedReviewPage() {
         const res = await getPendingNotes()
         const found = res.notes?.find((n: any) => n.id === params.id)
 
-        if (found) {
+        if (found && found.r2Path) {
+          // Check that r2Path exists
           setNote(found)
 
-          // Find all other notes in the same subject and module, sort alphabetically
           const relatedNotes =
             res.notes
               ?.filter(
@@ -57,30 +57,30 @@ export default function DetailedReviewPage() {
 
           setModuleNotes(relatedNotes)
 
-          // 1. Check if we already downloaded this during the session
+          // 1. Check cache
           if (noteContentCache[found.r2Path]) {
             setMarkdown(noteContentCache[found.r2Path])
             return
           }
 
-          // 2. If not in cache, fetch from R2
+          // 2. Fetch from R2
           const mdRes = await getNoteContentFromR2(found.r2Path)
 
-          if (mdRes.success) {
-            noteContentCache[found.r2Path] = mdRes.content // Save to cache
+          if (mdRes.success && mdRes.content) {
+            // Ensure content is a string
+            noteContentCache[found.r2Path] = mdRes.content
             setMarkdown(mdRes.content)
           } else {
             setError(mdRes.error || "Failed to load document content.")
           }
         } else {
-          setError("Document not found in the review queue.")
+          setError("Document not found or path is missing.")
         }
       } catch (err) {
         setError("A network error occurred while loading the document.")
       }
     }
 
-    // Reset markdown state when ID changes so it shows the loading state briefly
     setMarkdown(null)
     setError(null)
     loadDocument()
@@ -237,7 +237,7 @@ export default function DetailedReviewPage() {
               </span>
             </div>
 
-            <article className="prose prose-zinc dark:prose-invert max-w-none">
+            <article className="prose max-w-none prose-zinc dark:prose-invert">
               {markdown ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {markdown}

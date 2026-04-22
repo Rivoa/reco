@@ -174,9 +174,11 @@ export async function getNoteContentFromR2(r2Path: string) {
 
 /**
  * Bulk approve all notes in a specific module.
+ * Added 'course' to ensure precise filtering.
  */
 export async function batchApproveModule(
   univ: string,
+  course: string, // Added course parameter
   subject: string,
   module: string
 ) {
@@ -196,6 +198,14 @@ export async function batchApproveModule(
                   field: { fieldPath: "univ" },
                   op: "EQUAL",
                   value: { stringValue: univ },
+                },
+              },
+              {
+                // New Filter for Course
+                fieldFilter: {
+                  field: { fieldPath: "course" },
+                  op: "EQUAL",
+                  value: { stringValue: course },
                 },
               },
               {
@@ -239,6 +249,7 @@ export async function batchApproveModule(
       .filter((item: any) => item.document)
       .map((item: any) => item.document.name.split("/").pop())
 
+    // Parallelize individual patch requests
     await Promise.all(
       docIds.map((id: string) =>
         fetch(
@@ -259,6 +270,7 @@ export async function batchApproveModule(
 
     return { success: true, count: docIds.length }
   } catch (error) {
+    console.error("Batch Approval Error:", error)
     return { success: false }
   }
 }
